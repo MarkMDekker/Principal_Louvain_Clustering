@@ -15,7 +15,7 @@ import sys
 
 save        = 1
 date        = '20200113'
-ex          = 'HR_PAR'
+ex          = 'HR_PFC'
 PCs         = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/PCs/'+ex+'.pkl'))
 #PC1s        = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/PCs/Cutsets/HR_'+ex+'_pc1.pkl'))
 #PC2s        = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/PCs/Cutsets/HR_'+ex+'_pc2.pkl'))
@@ -30,7 +30,7 @@ Xpc = PCs[0]*np.sign(np.mean(PCs[0]))
 Ypc = PCs[1]*np.sign(np.mean(PCs[1]))
 tau = 30
 res = 100
-string=ex+'_cs'#ex+'_tau'+str(int(tau))+'_res'+str(int(res))
+string=ex#+'_cs'#ex+'_tau'+str(int(tau))+'_res'+str(int(res))
 #%%
 # --------------------------------------------------------------------- #
 # Retrieve phase-space, calculate locations and rates
@@ -96,7 +96,7 @@ Rates_n = np.array(np.nan_to_num(Rates_n,0))
 # Create and perform clustering (Louvain)
 # --------------------------------------------------------------------- #
 
-exec(open('/Users/mmdekker/Documents/Werk/Scripts/Classes/MODS/Pygraphviz.py').read())
+exec(open('/Users/mmdekker/Documents/Werk/Scripts/__General/Classes/MODS/Pygraphviz.py').read())
 from community import community_louvain
 from community import modularity
 
@@ -308,16 +308,17 @@ ax.text(0.16,0.93-0.03*(i+1),str(np.round(100*np.nansum(Num_exp)/np.nansum(Num),
 ax.text(0.26,0.93-0.03*(i+1),str(np.round(np.mean(Synchronization),3)),transform=ax.transAxes)
 ax.text(0.99,0.99,'Modularity: '+str(np.round(mod,3)),ha='right',va='top',transform=ax.transAxes,fontsize=15)
 
-maxy = ax.get_ylim()[1]
-miny = ax.get_ylim()[0]
-
 ax.tick_params(axis='both', which='major', labelsize=12)
 ax.tick_params(axis='both', which='minor', labelsize=12)
-ax.set_xlabel('Principal Component 1',fontsize=15)
-ax.set_ylabel('Principal Component 2',fontsize=15)
+ax.set_xlabel('Principal Component 1', fontsize=15)
+ax.set_ylabel('Principal Component 2', fontsize=15)
 ax.tick_params(axis='both', which='major', labelsize=14)
 ax.tick_params(axis='both', which='minor', labelsize=14)
 
+ax.set_ylim([-7, 7])
+ax.set_xlim([-7, 7])
 fig.tight_layout()
-figdir = '/Users/mmdekker/Documents/Werk/Figures/Neurostuff/Pics_'+date+'/Gridding/'
-if save==1: plt.savefig(figdir+string+'.png',bbox_inches = 'tight',dpi=200)
+figdir = ('/Users/mmdekker/Documents/Werk/Figures/Figures_Side/Brain/'
+          'Pics_'+date+'/Gridding/')
+if save == 1:
+    plt.savefig(figdir+string+'.png', bbox_inches='tight', dpi=200)
