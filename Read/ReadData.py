@@ -11,79 +11,106 @@
 # Preambule
 # --------------------------------------------------------------------------- #
 
+# Standard packages
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import matplotlib as mpl
-import sys
-import matplotlib.pyplot as plt
-from scipy.fftpack import rfftfreq, rfft
 import scipy.io
 import os
+
+# Packages for functions
+from scipy.fftpack import rfftfreq, rfft
 from scipy.optimize import curve_fit
-import warnings
-warnings.filterwarnings("ignore")
 from sklearn.cluster import KMeans
 import scipy.io
-datadir = '/Users/mmdekker/Documents/Werk/Data/Braindata/ObjectTest.mat'
-os.chdir('/Users/mmdekker/Documents/Werk/Scripts/__Other/BrainProject/Read/')
-exec(open('Functions.py').read())
-strings = ['Exploring new','Exploring old','Not exploring']
-figdir = '/Users/mmdekker/Documents/Werk/Figures/Neurostuff/Dataset_new/'
+import warnings
+warnings.filterwarnings("ignore")
+os.chdir('/Users/mmdekker/Documents/Werk/Scripts/Projects_Side/'
+         'PhaseSpaces_In_Brain/Read')
+from Functions import MeanCorrelation, Abundances, Standardize, FourierTrans
+from Functions import Powerlaw
 
+# --------------------------------------------------------------------------- #
+# Paths
+# --------------------------------------------------------------------------- #
+
+figdir = '/Users/mmdekker/Documents/Werk/Figures/Neurostuff/Dataset_new/'
+path_pdata = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
+              'ProcessedData/')
+st = ['all', 'nexp', 'exp']
+stC = ['All', 'Nexp', 'Exp']
+
+# --------------------------------------------------------------------------- #
+# Input
+# --------------------------------------------------------------------------- #
+
+N = 25000  # Amount of data points per signal
+f_low = 1  # frequency lower bound
+f_high = 100  # frequency upper bound
 
 # --------------------------------------------------------------------------- #
 # Data reading
 # --------------------------------------------------------------------------- #
 
-mat = scipy.io.loadmat(datadir)
+mat = scipy.io.loadmat(path_pdata+'../ObjectTest.mat')
 DataAll = mat['EEG'][0][0]
-Time        = DataAll[14]
-Data_dat    = DataAll[15]
-Data_re1    = DataAll[17]
-Data_re2    = DataAll[18]
-Data_re3    = DataAll[19]
-Data_re4    = DataAll[25]
-Data_re5    = DataAll[30]
-Data_re6    = DataAll[39]
-Data_vid    = DataAll[40].T
+Time = DataAll[14]
+Data_dat = DataAll[15][:, :N]
+Data_re1 = DataAll[17]
+Data_re2 = DataAll[18]
+Data_re3 = DataAll[19]
+Data_re4 = DataAll[25]
+Data_re5 = DataAll[30]
+Data_re6 = DataAll[39]
+Data_vid = DataAll[40].T
+Data_vid = Data_vid[:, :N]
 
 # --------------------------------------------------------------------------- #
 # Filter exploration
 # Used acronyms: A = exploring new, B = exploring old, C = not exploring
 # --------------------------------------------------------------------------- #
 
-ExploringNew    = np.where(Data_vid[2] == 1)[0]
-ExploringOld    = np.where(Data_vid[3] == 1)[0]
-Exploring       = np.unique(list(ExploringNew)+list(ExploringOld))
-NotExploring    = np.array(list(np.where(Data_vid[2] != 1)[0]) + list(np.where(Data_vid[3] != 1)[0]))
-Data_A = Data_dat[:,ExploringNew]
-Data_B = Data_dat[:,ExploringOld]
-Data_C = Data_dat[:,NotExploring]
-Data_D = Data_dat[:,Exploring]
-Data_all = Data_dat
+ExploringNew = np.where(Data_vid[2] == 1)[0]
+ExploringOld = np.where(Data_vid[3] == 1)[0]
+Exploring = np.unique(list(ExploringNew)+list(ExploringOld))
+NotExploring = np.unique(np.array(list(np.where(Data_vid[2] != 1)[0]) +
+                                  list(np.where(Data_vid[3] != 1)[0])))
+D_all = Data_dat
+D_nexp = Data_dat[:, NotExploring]
+D_exp = Data_dat[:, Exploring]
 
 # --------------------------------------------------------------------------- #
-# Standardizing data sets
+# Standardizing data sets: not necessary?
 # --------------------------------------------------------------------------- #
 
-Std_A = Standardize(Data_A)
-Std_B = Standardize(Data_B)
-Std_C = Standardize(Data_C)
-Std_D = Standardize(Data_D)
-Std_all = Standardize(Data_all)
+#SD_all = Standardize(D_all)
+#SD_nexp = Standardize(D_nexp)
+#SD_exp = Standardize(D_exp)
 
 # --------------------------------------------------------------------------- #
 # Fourier transform
 # --------------------------------------------------------------------------- #
 
-#FourierTrans(Data_A,'A')
-#FourierTrans(Data_B,'B')
-#FourierTrans(Data_C,'C')
-#FourierTrans(Data_D,'D')
+Ds = [D_all, D_nexp, D_exp]
+for i in range(3):
 
-F_A     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_A.pkl')
-Fwm_A   = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_wm_A.pkl')
+    # Fourier Transform
+    F, Fwm, freq = FourierTrans(Ds[i])
+    pd.DataFrame(F).to_pickle(path_pdata+'FFTs/'+stC[i]+'/'+str(N)+'.pkl')
+    pd.DataFrame(Fwm).to_pickle(path_pdata+'FFTs/'+stC[i]+'/'+str(N)+'_wm.pkl')
+
+    # Remove power laws
+    R, freq2 = Powerlaw(Fwm, freq, f_low, f_high)
+    pd.DataFrame(R).to_pickle(path_pdata+'Resids/'+stC[i]+'/'+str(N)+'.pkl')
+    pd.DataFrame(freq2).to_pickle(path_pdata+'Resids/Freq.pkl')
+
+#%%
+FourierTrans(Data_B,'B')
+FourierTrans(Data_C,'C')
+FourierTrans(Data_D,'D')
+
+F_A     = pd.read_pickle(path_pdata+'FFTs/FFTs_A.pkl')
+Fwm_A   = pd.read_pickle(path_pdata+'FFTs/FFTs_wm_A.pkl')
 F_B     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_B.pkl')
 Fwm_B   = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_wm_B.pkl')
 F_C     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_C.pkl')

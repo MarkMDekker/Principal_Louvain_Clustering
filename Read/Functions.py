@@ -3,18 +3,81 @@
 # =========================================================================== #
 
 import numpy as np
-#import time
 from tqdm import tqdm
 import sys
 from scipy.fftpack import rfftfreq, rfft
 from scipy.optimize import curve_fit
 
 # =========================================================================== #
+# Pre-process functions
+# =========================================================================== #
+
+
+def Standardize(Data):
+    '''
+    Function to standardize dataset.
+    Not being used right now.
+    '''
+    Data = Data.T
+    Data = Data.T - Data.mean(axis=1)
+    stds = Data.std(axis=0)
+    stds[stds == 0] = 1
+    Data = Data/stds
+    return Data
+
+
+def FourierTrans(Data):
+    '''
+    Take Fourier Transform of whole set,
+    for every signal in the data.
+    '''
+    ffts = []
+    ffts_wm = []
+    for i in tqdm(range(len(Data))):
+        FFT = np.abs(rfft(Data[i]))/len(Data[i])*2
+        ffts.append(FFT)
+        ffts_wm.append(windowmean(FFT, 50))
+        if i == 0:
+            freq = rfftfreq(len(FFT), d=1)
+    return ffts, ffts_wm, freq
+
+
+def Powerlaw(ffts_wm, freq, f_low, f_high):
+    '''
+    Iterate over signals, look at the power spectrum, fit powerlaw and
+    remove this power law from the data. Returns residuals.
+    '''
+    Hz1 = np.where(freq > f_low)[0][0]
+    Hz2 = np.where(freq <= f_high*2)[0][-1]
+    frq = freq[Hz1:Hz2]
+    resids = []
+    for i in tqdm(range(len(ffts_wm))):
+        a, b = RemovePowerlaw(ffts_wm[i], freq, f_low, f_high)
+        resids.append(a)
+        frq = b
+    return resids, frq
+
+
+def fc(x, a, b):
+    return x**a * b
+
+
+def RemovePowerlaw(Data, freq, f_low, f_high):
+    Hz1 = np.where(freq > f_low)[0][0]
+    Hz2 = np.where(freq <= f_high)[0][-1]
+    frq = freq[Hz1:Hz2]
+    data = Data[Hz1:Hz2]
+    popt, pcov = curve_fit(fc, frq, data)
+    residual = data - fc(frq, popt[0], popt[1])
+    return np.array(residual), np.array(frq)
+
+
+# =========================================================================== #
 # Core function
 # =========================================================================== #
 
-def MeanCorrelation(Data,ws,N,wh = []):
-    
+
+def MeanCorrelation(Data, ws, N, wh=[]):
     if len(wh)==0: wh = range(len(Data))
     #T0 = time.time()
     abundsa = []
@@ -71,6 +134,7 @@ def MeanCorrelation(Data,ws,N,wh = []):
 # Helper functions
 # =========================================================================== #
 
+
 def Abundances(Data,frq,borders,wheres):
     abund = []
     for i in range(len(borders)-1):
@@ -79,19 +143,6 @@ def Abundances(Data,frq,borders,wheres):
 
 def fc(x, a, b):
     return x**a * b
-    
-def RemovePowerlaw2(Data,frq,Hz1,Hz2):
-    data = Data[Hz1:Hz2]
-    try:
-        popt, pcov = curve_fit(fc, frq, data,p0 = [-0.5, 0.02])
-    except:
-        popt = [np.nan,np.nan]
-    ind = 0
-    while len(frq)!=len(data) and ind<10:
-        data = np.array(list(data)+[0])
-        ind +=1
-    residual = data - fc(frq,popt[0],popt[1])
-    return np.array(residual)
 
 def WeightFreq(data):
     FFT = rfft(data)
@@ -127,48 +178,6 @@ def relabund(fft,freq):
     freq_g = np.sum(fft[np.intersect1d(np.where(freq>=38)[0],np.where(freq<=42)[0])])/np.sum(fft)
     return [freq_t,freq_a,freq_b,freq_g]
 
-def RemovePowerlaw(Data,freq):
-    def fc(x, a, b):
-        return x**a * b
-    Hz1 = np.where(freq>1)[0][0] # only from 1 Hz and larger
-    Hz2 = np.where(freq<=100)[0][-1] # only from 200 Hz and lower
-    frq = freq[Hz1:Hz2]
-    data = Data[Hz1:Hz2]                            # !
-    popt, pcov = curve_fit(fc, frq, data)
-    residual = data - fc(frq,popt[0],popt[1])
-    return np.array(residual),np.array(frq)         # !
-
-def Standardize(Data):
-    Data = Data.T
-    Data = Data.T - Data.mean(axis=1)
-    stds = Data.std(axis=0)
-    stds[stds==0] = 1
-    Data = Data/stds
-    return Data
-
-def FourierTrans(Data,string):
-    ffts = []
-    ffts_wm = []
-    for i in tqdm(range(len(Data)),file=sys.stdout):
-        FFT = np.abs(rfft(Data[i]))/len(Data[i])*2
-        freq = rfftfreq(len(FFT),d=1)
-        ffts.append(FFT)
-        ffts_wm.append(windowmean(FFT,50))
-    pd.DataFrame(ffts).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs_'+string+'.pkl')
-    pd.DataFrame(ffts_wm).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs_wm_'+string+'.pkl')
-
-def Powerlaw(ffts_wm,string,freq):
-    Hz1 = np.where(freq>1)[0][0] # only from 1 Hz and larger
-    Hz2 = np.where(freq<=200)[0][-1] # only from 200 Hz and lower
-    frq = freq[Hz1:Hz2]
-    resids = []
-    for i in tqdm(range(len(ffts_wm)),file=sys.stdout):
-        a,b = RemovePowerlaw(ffts_wm[i],freq)
-        resids.append(a)
-        frq = b
-    pd.DataFrame(resids).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids_'+string+'.pkl')
-    pd.DataFrame(frq).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids_frq.pkl')
-        
 def MeanCorrelation_old(Data,ws,N,wh = []):
     if len(wh)==0: wh = range(len(Data))
     abundsa = []
