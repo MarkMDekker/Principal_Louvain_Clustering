@@ -36,9 +36,9 @@ def FourierTrans(Data):
     for i in tqdm(range(len(Data))):
         FFT = np.abs(rfft(Data[i]))/len(Data[i])*2
         ffts.append(FFT)
-        ffts_wm.append(windowmean(FFT, 50))
+        ffts_wm.append(windowmean(FFT, 25))
         if i == 0:
-            freq = rfftfreq(len(FFT), d=1)
+            freq = rfftfreq(len(FFT), d=1e-3)
     return ffts, ffts_wm, freq
 
 
@@ -47,9 +47,6 @@ def Powerlaw(ffts_wm, freq, f_low, f_high):
     Iterate over signals, look at the power spectrum, fit powerlaw and
     remove this power law from the data. Returns residuals.
     '''
-    Hz1 = np.where(freq > f_low)[0][0]
-    Hz2 = np.where(freq <= f_high*2)[0][-1]
-    frq = freq[Hz1:Hz2]
     resids = []
     for i in tqdm(range(len(ffts_wm))):
         a, b = RemovePowerlaw(ffts_wm[i], freq, f_low, f_high)
@@ -64,6 +61,8 @@ def fc(x, a, b):
 
 def RemovePowerlaw(Data, freq, f_low, f_high):
     Hz1 = np.where(freq > f_low)[0][0]
+    Hza = np.where(~np.isnan(Data))[0][0]
+    Hz1 = np.max([Hz1, Hza])
     Hz2 = np.where(freq <= f_high)[0][-1]
     frq = freq[Hz1:Hz2]
     data = Data[Hz1:Hz2]
@@ -77,69 +76,66 @@ def RemovePowerlaw(Data, freq, f_low, f_high):
 # =========================================================================== #
 
 
-def MeanCorrelation(Data, ws, N, wh=[]):
-    if len(wh)==0: wh = range(len(Data))
-    #T0 = time.time()
+def MeanCorrelation(Data, ws, N, f_low, f_high, wh=[]):
+    N = np.min([N, len(Data[0])])
+    if len(wh) == 0:
+        wh = range(len(Data))
     abundsa = []
     means = []
-    steps = np.arange(ws,N-ws)
-    sers = Data[:,ws-ws:ws+ws]
-    freq_red = rfftfreq(len(sers[0]),d=1e-3)
-    
-    Hz1 = np.where(freq_red>=0.5)[0][0] # only from 1 Hz and larger
-    Hz2 = np.where(freq_red<=100.5)[0][-1] # only from 200 Hz and lower
+    steps = np.arange(ws, N-ws)
+    sers = Data[:, ws-ws:ws+ws]
+    freq_red = rfftfreq(len(sers[0]), d=1e-3)
+
+    Hz1 = np.where(freq_red >= f_low-0.5)[0][0]
+    Hz2 = np.where(freq_red <= f_high+0.5)[0][-1]
     frq = freq_red[Hz1:Hz2]
-    
-    borders = np.arange(0,101,2)
+
+    borders = np.arange(0, 101, 2)
     wheres = []
     ran = np.arange(len(frq))
     for i in range(len(borders)-1):
-        wheres.append(ran[(frq>borders[i]) & (frq<=borders[i+1])])
-    
-    #T1 = time.time() - T0
-    #T3 = []
-    #T4 = []
-    #T5 = []
-    #T6 = []
-    #print('T1',T1)
-    for step in tqdm(steps,file=sys.stdout):
+        wheres.append(ran[(frq > borders[i]) & (frq <= borders[i+1])])
+
+    for step in tqdm(steps):
         ffts = []
-        sers = Data[wh,step-ws:step+ws]
+        sers = Data[wh, step-ws:step+ws]
         abunds = []
         for i in range(len(sers)):
-            #T2 = time.time() - T0
-            FFT = np.abs(rfft(sers[i]))/len(sers[i])*2#,2)
+            FFT = np.abs(rfft(sers[i]))/len(sers[i])*2
             FFT = FFT[~np.isnan(FFT)]/np.sum(FFT)
-            #T3a = time.time() - T0
-            #T3.append(T3a-T2)
-            FFTn = RemovePowerlaw2(FFT,frq,Hz1,Hz2)
-            #T4a = time.time() - T0
-            #T4.append(T4a - T3a)
+            FFTn = RemovePowerlaw2(FFT, frq, Hz1, Hz2)
             ffts.append(FFTn)
-            abunds.append(Abundances(FFTn,frq,borders,wheres))
-            #T5a = time.time() - T0
-            #T5.append(T5a - T4a)
-        abundsa.append(np.nanmean(abunds,axis=0))
+            abunds.append(Abundances(FFTn, frq, borders, wheres))
+        abundsa.append(np.nanmean(abunds, axis=0))
         means.append(np.nanmean(np.corrcoef(ffts)))
-        #T6a = time.time() - T0
-        #T6.append(T6a - T5a)
-        
-    #print('T3',np.mean(T3))
-    #print('T4',np.mean(T4))
-    #print('T5',np.mean(T5))
-    #print('T6',np.mean(T6))
-    return np.array(means),np.array(abundsa),np.array(steps)
-    
-# =========================================================================== #
-# Helper functions
-# =========================================================================== #
+    return np.array(means), np.array(abundsa), np.array(steps)
 
 
-def Abundances(Data,frq,borders,wheres):
+def Abundances(Data, frq, borders, wheres):
     abund = []
     for i in range(len(borders)-1):
         abund.append(np.mean(Data[wheres[i]]))
     return abund
+
+
+def RemovePowerlaw2(Data, frq, Hz1, Hz2):
+    data = Data[Hz1:Hz2]
+    try:
+        popt, pcov = curve_fit(fc, frq, data, p0=[-0.5, 0.02])
+    except:
+        popt = [np.nan, np.nan]
+    ind = 0
+    while len(frq) != len(data) and ind < 100:
+        data = np.array(list(data)+[0])
+        ind += 1
+    residual = data - fc(frq, popt[0], popt[1])
+    return np.array(residual)
+
+
+# =========================================================================== #
+# Helper functions
+# =========================================================================== #
+
 
 def fc(x, a, b):
     return x**a * b

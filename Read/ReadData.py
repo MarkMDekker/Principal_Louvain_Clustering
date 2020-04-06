@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 os.chdir('/Users/mmdekker/Documents/Werk/Scripts/Projects_Side/'
          'PhaseSpaces_In_Brain/Read')
 from Functions import MeanCorrelation, Abundances, Standardize, FourierTrans
-from Functions import Powerlaw
+from Functions import Powerlaw, ProcessPower
 
 # --------------------------------------------------------------------------- #
 # Paths
@@ -45,8 +45,10 @@ stC = ['All', 'Nexp', 'Exp']
 # --------------------------------------------------------------------------- #
 
 N = 25000  # Amount of data points per signal
+prt = 9  # part of the dataset: for confidence intervals
 f_low = 1  # frequency lower bound
 f_high = 100  # frequency upper bound
+save = 0
 
 # --------------------------------------------------------------------------- #
 # Data reading
@@ -55,7 +57,7 @@ f_high = 100  # frequency upper bound
 mat = scipy.io.loadmat(path_pdata+'../ObjectTest.mat')
 DataAll = mat['EEG'][0][0]
 Time = DataAll[14]
-Data_dat = DataAll[15][:, :N]
+Data_dat = DataAll[15][:, N*prt:N*prt+N]
 Data_re1 = DataAll[17]
 Data_re2 = DataAll[18]
 Data_re3 = DataAll[19]
@@ -63,18 +65,16 @@ Data_re4 = DataAll[25]
 Data_re5 = DataAll[30]
 Data_re6 = DataAll[39]
 Data_vid = DataAll[40].T
-Data_vid = Data_vid[:, :N]
+Data_vid = Data_vid[:, N*prt:N*prt+N]
+Data_ran = np.arange(len(Data_vid[0]))
 
 # --------------------------------------------------------------------------- #
 # Filter exploration
 # Used acronyms: A = exploring new, B = exploring old, C = not exploring
 # --------------------------------------------------------------------------- #
 
-ExploringNew = np.where(Data_vid[2] == 1)[0]
-ExploringOld = np.where(Data_vid[3] == 1)[0]
-Exploring = np.unique(list(ExploringNew)+list(ExploringOld))
-NotExploring = np.unique(np.array(list(np.where(Data_vid[2] != 1)[0]) +
-                                  list(np.where(Data_vid[3] != 1)[0])))
+Exploring = Data_ran[(Data_vid[2] == 1) | (Data_vid[3] == 1)]
+NotExploring = Data_ran[(Data_vid[2] != 1) & (Data_vid[3] != 1)]
 D_all = Data_dat
 D_nexp = Data_dat[:, NotExploring]
 D_exp = Data_dat[:, Exploring]
@@ -83,9 +83,9 @@ D_exp = Data_dat[:, Exploring]
 # Standardizing data sets: not necessary?
 # --------------------------------------------------------------------------- #
 
-#SD_all = Standardize(D_all)
-#SD_nexp = Standardize(D_nexp)
-#SD_exp = Standardize(D_exp)
+SD_all = Standardize(D_all)
+SD_nexp = Standardize(D_nexp)
+SD_exp = Standardize(D_exp)
 
 # --------------------------------------------------------------------------- #
 # Fourier transform
@@ -94,97 +94,21 @@ D_exp = Data_dat[:, Exploring]
 Ds = [D_all, D_nexp, D_exp]
 for i in range(3):
 
-    # Fourier Transform
+    # Perform Fourier Transformations
     F, Fwm, freq = FourierTrans(Ds[i])
-    pd.DataFrame(F).to_pickle(path_pdata+'FFTs/'+stC[i]+'/'+str(N)+'.pkl')
-    pd.DataFrame(Fwm).to_pickle(path_pdata+'FFTs/'+stC[i]+'/'+str(N)+'_wm.pkl')
 
     # Remove power laws
     R, freq2 = Powerlaw(Fwm, freq, f_low, f_high)
-    pd.DataFrame(R).to_pickle(path_pdata+'Resids/'+stC[i]+'/'+str(N)+'.pkl')
-    pd.DataFrame(freq2).to_pickle(path_pdata+'Resids/Freq.pkl')
 
-#%%
-FourierTrans(Data_B,'B')
-FourierTrans(Data_C,'C')
-FourierTrans(Data_D,'D')
+    if save == 1:
+        pd.DataFrame(F).to_pickle(path_pdata+'FFTs/'+stC[i]+'/'+str(N) +
+                                  '_'+str(prt)+'.pkl')
+        pd.DataFrame(Fwm).to_pickle((path_pdata+'FFTs/'+stC[i]+'/'+str(N) +
+                                     '_'+str(prt)+'_wm.pkl'))
+        pd.DataFrame(R).to_pickle((path_pdata+'Resids/'+stC[i]+'/'+str(N) +
+                                   '_'+str(prt)+'.pkl'))
+        pd.DataFrame(freq2).to_pickle(path_pdata+'Resids/Freq.pkl')
 
-F_A     = pd.read_pickle(path_pdata+'FFTs/FFTs_A.pkl')
-Fwm_A   = pd.read_pickle(path_pdata+'FFTs/FFTs_wm_A.pkl')
-F_B     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_B.pkl')
-Fwm_B   = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_wm_B.pkl')
-F_C     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_C.pkl')
-Fwm_C   = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_wm_C.pkl')
-F_D     = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_D.pkl')
-Fwm_D   = pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/FFTs/FFTs_wm_D.pkl')
-
-Fwm_A = np.array(Fwm_A)[:,25:]
-Fwm_A = np.array(Fwm_A)[:,:-25]
-Fwm_B = np.array(Fwm_B)[:,25:]
-Fwm_B = np.array(Fwm_B)[:,:-25]
-Fwm_C = np.array(Fwm_C)[:,25:]
-Fwm_C = np.array(Fwm_C)[:,:-25]
-Fwm_D = np.array(Fwm_D)[:,25:]
-Fwm_D = np.array(Fwm_D)[:,:-25]
-
-freq = rfftfreq(len(Fwm_A[0]),d=1e-3)
-Fwm_A = (Fwm_A.T/np.sum(Fwm_A,axis=1)).T
-Fwm_B = (Fwm_B.T/np.sum(Fwm_B,axis=1)).T
-Fwm_C = (Fwm_C.T/np.sum(Fwm_C,axis=1)).T
-Fwm_D = (Fwm_D.T/np.sum(Fwm_D,axis=1)).T
-
-# --------------------------------------------------------------------- #
-# Remove power laws
-# --------------------------------------------------------------------- #
-
-#Powerlaw(Fwm_A,'A',freq)
-#Powerlaw(Fwm_B,'B',freq)
-#Powerlaw(Fwm_C,'C',freq)
-#Powerlaw(Fwm_D,'D',freq)
-
-rA = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids/Resids_A.pkl'))
-rB = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids/Resids_B.pkl'))
-rC = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids/Resids_C.pkl'))
-rD = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids/Resids_D.pkl'))
-frq = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Resids/Resids_frq.pkl'))
-
-# --------------------------------------------------------------------- #
-# Calculate covariance matrices (overall)
-# --------------------------------------------------------------------- #
-
-#CovMatA = Std_A.dot(Std_A.T)
-#CovMatB = Std_B.dot(Std_B.T)
-#CovMatC = Std_C.dot(Std_C.T)
-#CovMatD = Std_D.dot(Std_D.T)
-#pd.DataFrame(CovMatA/np.nanmax(np.abs(CovMatA))).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatA.pkl')
-#pd.DataFrame(CovMatB/np.nanmax(np.abs(CovMatB))).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatB.pkl')
-#pd.DataFrame(CovMatC/np.nanmax(np.abs(CovMatC))).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatC.pkl')
-#pd.DataFrame(CovMatD/np.nanmax(np.abs(CovMatD))).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatD.pkl')
-
-CovMatA = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatA.pkl'))
-CovMatB = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatB.pkl'))
-CovMatC = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatC.pkl'))
-CovMatD = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CovMat/CovMatD.pkl'))
-
-# --------------------------------------------------------------------- #
-# Calculate correlation matrices (overall, residues)
-# --------------------------------------------------------------------- #
-
-#CorrMatA = np.corrcoef(rA)
-#CorrMatB = np.corrcoef(rB)
-#CorrMatC = np.corrcoef(rC)
-#CorrMatD = np.corrcoef(rD)
-#pd.DataFrame(CorrMatA).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatA.pkl')
-#pd.DataFrame(CorrMatB).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatB.pkl')
-#pd.DataFrame(CorrMatC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatC.pkl')
-#pd.DataFrame(CorrMatD).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatD.pkl')
-
-CorrMatA = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatA.pkl'))
-CorrMatB = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatB.pkl'))
-CorrMatC = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatC.pkl'))
-CorrMatD = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/CorrMat/CorrMatD.pkl'))
-
-#%%
 # --------------------------------------------------------------------- #
 # Perform brain-specific analyses
 # => On the exploration part (D)
@@ -194,12 +118,21 @@ CorrMatD = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindat
 # PFC
 # --------------------------------------------------------------------- #
 
-Synchronization_PFC, RelativePower_PFC, Steps_PFC = MeanCorrelation(Std_D,500,200000,range(16))
-ProcessedPower_PFC = ProcessPower(RelativePower_PFC)
-pd.DataFrame(Synchronization_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/HR_PFC.pkl')
-pd.DataFrame(RelativePower_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/HR_PFC.pkl')
-pd.DataFrame(Steps_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/HR_PFC.pkl')
-pd.DataFrame(ProcessedPower_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/HR_PFC.pkl')
+Sets = [range(16), range(16, 24), range(24, 23)]
+Strs = ['PFC', 'PAR', 'HIP']
+for i in range(3):
+    Sync, RelP, St = MeanCorrelation(SD_all, 500, N, f_low, f_high, range(16))
+    Proc = ProcessPower(RelP)
+    pd.DataFrame(Sync).to_pickle(path_pdata+'Synchronization/'+Strs[i]+'/'+str(N) +
+                                  '_'+str(prt)+'.pkl')
+    pd.DataFrame(RelP).to_pickle(path_pdata+'RelativePower/'+Strs[i]+'/'+str(N) +
+                                  '_'+str(prt)+'.pkl')
+    pd.DataFrame(St).to_pickle(path_pdata+'Steps/'+Strs[i]+'/'+str(N) +
+                               '_'+str(prt)+'.pkl')
+    pd.DataFrame(Proc).to_pickle(path_pdata+'ProcessedPower/'+Strs[i]+'/'+str(N) +
+                                  '_'+str(prt)+'.pkl')
+
+
 #%%
 # --------------------------------------------------------------------- #
 # HIP
