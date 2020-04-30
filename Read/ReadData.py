@@ -44,11 +44,11 @@ stC = ['All', 'Nexp', 'Exp']
 # Input
 # --------------------------------------------------------------------------- #
 
-N = 25000  # Amount of data points per signal
-prt = 9  # part of the dataset: for confidence intervals
+N = 600000  # Amount of data points per signal
+prt = 0  # part of the dataset: for confidence intervals
 f_low = 1  # frequency lower bound
 f_high = 100  # frequency upper bound
-save = 0
+save = 1
 
 # --------------------------------------------------------------------------- #
 # Data reading
@@ -121,7 +121,7 @@ for i in range(3):
 Sets = [range(16), range(16, 24), range(24, 23)]
 Strs = ['PFC', 'PAR', 'HIP']
 for i in range(3):
-    Sync, RelP, St = MeanCorrelation(SD_all, 500, N, f_low, f_high, range(16))
+    Sync, RelP, St = MeanCorrelation(SD_all, 500, N, f_low, f_high, Sets[i])
     Proc = ProcessPower(RelP)
     pd.DataFrame(Sync).to_pickle(path_pdata+'Synchronization/'+Strs[i]+'/'+str(N) +
                                   '_'+str(prt)+'.pkl')
@@ -132,84 +132,6 @@ for i in range(3):
     pd.DataFrame(Proc).to_pickle(path_pdata+'ProcessedPower/'+Strs[i]+'/'+str(N) +
                                   '_'+str(prt)+'.pkl')
 
-
-#%%
-# --------------------------------------------------------------------- #
-# HIP
-# --------------------------------------------------------------------- #
-
-Synchronization_HIP, RelativePower_HIP, Steps_HIP = MeanCorrelation(Std_D,500,200000,range(24,32))
-ProcessedPower_HIP = ProcessPower(RelativePower_HIP)
-pd.DataFrame(Synchronization_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/HR_HIP.pkl')
-pd.DataFrame(RelativePower_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/HR_HIP.pkl')
-pd.DataFrame(Steps_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/HR_HIP.pkl')
-pd.DataFrame(ProcessedPower_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/HR_HIP.pkl')
-#%%
-# --------------------------------------------------------------------- #
-# PAR
-# --------------------------------------------------------------------- #
-
-Synchronization_PAR, RelativePower_PAR, Steps_PAR = MeanCorrelation(Std_D,500,200000,range(16,24))
-ProcessedPower_PAR = ProcessPower(RelativePower_PAR)
-pd.DataFrame(Synchronization_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/HR_PAR.pkl')
-pd.DataFrame(RelativePower_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/HR_PAR.pkl')
-pd.DataFrame(Steps_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/HR_PAR.pkl')
-pd.DataFrame(ProcessedPower_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/HR_PAR.pkl')
-
-#%%
-# --------------------------------------------------------------------- #
-# Perform brain-specific analyses
-# => On all data
-# --------------------------------------------------------------------- #
-
-# --------------------------------------------------------------------- #
-# PFC
-# --------------------------------------------------------------------- #
-
-Synchronization_PFC, RelativePower_PFC, Steps_PFC = MeanCorrelation(Std_all,500,500000,range(16))
-ProcessedPower_PFC = ProcessPower(RelativePower_PFC)
-pd.DataFrame(Synchronization_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/PFC_hr.pkl')
-pd.DataFrame(RelativePower_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/PFC_hr.pkl')
-pd.DataFrame(Steps_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/PFC_hr.pkl')
-pd.DataFrame(ProcessedPower_PFC).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/PFC_hr.pkl')
-#%%
-# --------------------------------------------------------------------- #
-# HIP
-# --------------------------------------------------------------------- #
-
-Synchronization_PAR, RelativePower_PAR, Steps_PAR = MeanCorrelation(Std_all,500,500000,range(16,24))
-ProcessedPower_PAR = ProcessPower(RelativePower_PAR)
-pd.DataFrame(Synchronization_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/PAR_hr.pkl')
-pd.DataFrame(RelativePower_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/PAR_hr.pkl')
-pd.DataFrame(Steps_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/PAR_hr.pkl')
-pd.DataFrame(ProcessedPower_PAR).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/PAR_hr.pkl')
-#%%
-# --------------------------------------------------------------------- #
-# PAR
-# --------------------------------------------------------------------- #
-
-Synchronization_HIP, RelativePower_HIP, Steps_HIP = MeanCorrelation(Std_all,500,500000,range(24,32))
-ProcessedPower_HIP = ProcessPower(RelativePower_HIP)
-pd.DataFrame(Synchronization_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/HIP_hr.pkl')
-pd.DataFrame(RelativePower_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/HIP_hr.pkl')
-pd.DataFrame(Steps_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/HIP_hr.pkl')
-pd.DataFrame(ProcessedPower_HIP).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/HIP_hr.pkl')
-#%%
-# --------------------------------------------------------------------- #
-# All brain regions
-# --------------------------------------------------------------------- #
-
-Synchronization, RelativePower, Steps = MeanCorrelation(Std_all,500,100000,range(32))
-ProcessedPower = ProcessPower(RelativePower)
-pd.DataFrame(Synchronization).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Synchronization/ALL_hr1.pkl')
-pd.DataFrame(RelativePower).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/RelativePower/ALL_hr1.pkl')
-pd.DataFrame(Steps).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/Steps/ALL_hr1.pkl')
-pd.DataFrame(ProcessedPower).to_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ProcessedData/ProcessedPower/ALL_hr1.pkl')
-##%%
-#Synchronization = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ObjectExperiment/Synchronization.pkl')).T[0]
-#RelativePower = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ObjectExperiment/RelativePower.pkl'))
-#Steps = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ObjectExperiment/Steps.pkl')).T[0]
-#ProcessedPower = np.array(pd.read_pickle('/Users/mmdekker/Documents/Werk/Data/Braindata/ObjectExperiment/ProcessedPower.pkl'))
 
 #%%
 
