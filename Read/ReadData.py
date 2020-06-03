@@ -118,7 +118,7 @@ for i in range(3):
 # PFC
 # --------------------------------------------------------------------- #
 
-Sets = [range(16), range(16, 24), range(24, 23)]
+Sets = [range(16), range(16, 24), range(24, 32)]
 Strs = ['PFC', 'PAR', 'HIP']
 for i in range(3):
     Sync, RelP, St = MeanCorrelation(SD_all, 500, N, f_low, f_high, Sets[i])
