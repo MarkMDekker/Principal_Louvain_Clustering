@@ -74,16 +74,11 @@ def fc(x, a, b):
 
 
 def RemovePowerlaw2(Data, frq, Hz1, Hz2):
-    data = Data[Hz1:Hz2]#[Nnan]
-    #print(len(data))
+    data = Data[Hz1:Hz2]
     try:
         popt, pcov = curve_fit(fc, frq, data, p0=[-0.5, 0.02])
     except:
         popt = [np.nan, np.nan]
-    # ind = 0
-    # while len(frq) != len(data) and ind < 100:
-    #     data = np.array(list(data)+[0])
-    #     ind += 1
     residual = data - fc(frq, popt[0], popt[1])
     return np.array(residual)
 
@@ -91,7 +86,7 @@ def RemovePowerlaw2(Data, frq, Hz1, Hz2):
 def ProcessPower(RelativePower):
     Power_proc = []
     for i in range(len(RelativePower[0])):
-        Sery = np.copy(RelativePower[:,i])
+        Sery = np.copy(RelativePower[:, i])
         Sery = Sery - np.nanmean(Sery)
         Sery = Sery / np.nanstd(Sery)
         Power_proc.append(Sery)
