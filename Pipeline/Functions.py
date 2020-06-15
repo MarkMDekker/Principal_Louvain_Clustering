@@ -105,3 +105,11 @@ def func12(vec):
 
 def func21(mat):
     return mat.flatten()
+
+
+def overlap_metric(Cm, Cc):
+    exism = np.copy(Cm)
+    exisc = np.copy(Cc)
+    intersect = np.intersect1d(exisc, exism)
+    score = len(intersect) / (1e-9+len(exisc))    
+    return score
