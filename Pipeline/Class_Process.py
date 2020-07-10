@@ -36,8 +36,8 @@ class Brain_process(object):
 
         ''' Dataset '''
         self.SUBJECT = config['DATASET']['SUBJECT']
-        self.TYPE = config['DATASET']['TYPE']
         self.REGION = config['DATASET']['REGION']
+        self.FULL = int(config['DATASET']['FULL'])
 
         ''' Important constants '''
         self.SUBN = int(config['PARAMS']['SUBN'])
@@ -47,6 +47,7 @@ class Brain_process(object):
         self.PCY = int(config['PARAMS']['PCY'])
         self.W = int(config['PARAMS']['WINDOW'])
         self.TH = np.float(config['PARAMS']['NETW_TH'])
+        self.MINCLUS = int(config['PARAMS']['MINCLUS'])
 
         ''' Paths '''
         self.Path_Data = config['PATHS']['DATA_RAW']
@@ -54,27 +55,22 @@ class Brain_process(object):
         self.Path_Figsave = config['PATHS']['FIG_SAVE']
 
         ''' Read dataset '''
-        self.RawData = scipy.io.loadmat(self.Path_Data+self.SUBJECT+'_' +
-                                        self.TYPE+'.mat')
-        self.Datacat = self.RawData['interpolatedCategory']
-        self.DataEEG = self.RawData['EEG'][0][0][15]
-        if self.TYPE == 'TEST':
-            self.SUBJECT += 'T'
+        self.RawData1 = scipy.io.loadmat(self.Path_Data+self.SUBJECT+'_Training.mat')
+        self.RawData2 = scipy.io.loadmat(self.Path_Data+self.SUBJECT+'_Test.mat')
+        Datacat1 = list(np.array(self.RawData1['interpolatedCategory'])[0][self.W:-self.W])
+        Datacat2 = list(np.array(self.RawData2['interpolatedCategory'])[0][self.W:-self.W])
+        self.Datacat = np.array(Datacat1+Datacat2)
 
         print('# ----------------------------------------------------------'
-              '------------------------------------------- #')
-        print('# Starting processing for '+self.SUBJECT+'-'+self.TYPE +
-              ' in '+self.REGION+' with subparts of length '+str(self.SUBN))
+              '------------------- #')
+        print('# Starting processing for '+self.SUBJECT +
+              ' in '+self.REGION)
         print('# ----------------------------------------------------------'
-              '------------------------------------------- #')
+              '------------------- #')
 
         self.Name_M = self.REGION+'_'+self.SUBJECT
-        self.Name_Sub = self.REGION+'_'+self.SUBJECT+'/Sub_'+str(self.SUBN)+'/'
-
-    def preprocess(self):
-        ''' Preprocess raw data '''
-
-        self.SEEG = Standardize(self.DataEEG)
+        if self.FULL == 1:
+            self.Name_M = 'F_'+self.Name_M
 
     def load_files(self):
         ''' loading necessary files '''
@@ -82,7 +78,14 @@ class Brain_process(object):
         st = self.Path_Datasave+'Clusters/'
         ClustersH = []
         for j in range(6):
-            ClustersH.append(np.array(pd.read_pickle(st+self.Name_Sub +
+            name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
+                    '_'+str(self.SUBN))
+            ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
+                                                     str(j)+'.pkl')))
+        for j in range(6):
+            name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
+                    'T_'+str(self.SUBN))
+            ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
                                                      str(j)+'.pkl')))
         self.SubclusH = np.array(ClustersH)
         self.MasclusH = np.array(pd.read_pickle(st+self.Name_M+'.pkl'))
@@ -95,7 +98,7 @@ class Brain_process(object):
         ''' Create similarity network '''
         setlist = []
         Clusters = []
-        for i in range(6):
+        for i in range(len(self.SubclusH)):
             for j in range(int(np.nanmax(self.SubclusH[i].T[1])+1)):
                 Clusters.append(np.where(self.SubclusH[i].T[1] == j)[0])
                 setlist.append(i)
@@ -143,12 +146,11 @@ class Brain_process(object):
         self.MasClus_s = []
         self.TotClus_s = []
         self.WeiClus_s = []
-        for i in range(len(Clusclus)):
-            if len(np.unique(sets[i])) >= 4:
-                if np.mean(weight_clus[i]) > 0.65:
-                    self.MasClus_s.append(Clusclus[i][0])
-                    self.TotClus_s.append(Clusclus[i])
-                    self.WeiClus_s.append(weight_clus[i])
+        for i in range(len(Clusclus)):         
+            if len(np.unique(sets[i])) >= self.MINCLUS:
+                self.MasClus_s.append(Clusclus[i][0])
+                self.TotClus_s.append(Clusclus[i])
+                self.WeiClus_s.append(weight_clus[i])
 
     def plot_preselection_network(self):
         ''' plot graph of master clusters and subclusters '''
@@ -158,7 +160,7 @@ class Brain_process(object):
             dicty[tuple(self.Netw_edges[i])] = np.round(self.Netw_weights[i],
                                                         2)
         colors = ['forestgreen', 'tomato', 'steelblue', 'orange', 'violet',
-                  'brown']
+                  'brown', 'navy', 'dodgerblue', 'goldenrod', 'magenta', 'grey', 'green']
         cols = []
         for i in self.Network.nodes:
             try:
@@ -206,11 +208,14 @@ class Brain_process(object):
 
         ss = np.array(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
                        'L', 'M', 'N'])
-        Cluster_series = ss[self.MasclusH[self.Locations].T[1].astype(int)]
+        clusjes = self.MasclusH[self.Locations].T[1].astype(int)
+        Cluster_series = np.zeros(len(clusjes))+np.nan
+        Cluster_series = Cluster_series.astype(str)
+        Cluster_series[clusjes >= 0] = ss[clusjes[clusjes >= 0]]
         dicty = {}
-        dicty['Act'] = self.Datacat[0][self.W:-self.W]
+        dicty['Act'] = self.Datacat
         dicty[self.REGION] = Cluster_series
         DF = pd.DataFrame(dicty)
-        DF.PFC[~DF.PFC.isin(self.MasClus_s)] = '-'
+        DF[self.REGION][~DF[self.REGION].isin(self.MasClus_s)] = '-'
         self.DF = DF
         self.DF.to_pickle(self.Path_Datasave+'ActiveClusters/'+self.Name_M+'.pkl')

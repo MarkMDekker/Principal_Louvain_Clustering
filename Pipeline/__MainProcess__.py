@@ -18,7 +18,6 @@ warnings.filterwarnings("ignore")
 
 params_input = {}
 Class = Brain_process(params_input)
-Class.preprocess()
 Class.load_files()
 Class.select_master_clusters()
 Class.plot_preselection_network()
