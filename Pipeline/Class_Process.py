@@ -38,6 +38,7 @@ class Brain_process(object):
         self.SUBJECT = config['DATASET']['SUBJECT']
         self.REGION = config['DATASET']['REGION']
         self.FULL = int(config['DATASET']['FULL'])
+        self.ROBUST = int(config['DATASET']['ROBUST'])
 
         ''' Important constants '''
         self.SUBN = int(config['PARAMS']['SUBN'])
@@ -77,16 +78,17 @@ class Brain_process(object):
 
         st = self.Path_Datasave+'Clusters/'
         ClustersH = []
-        for j in range(6):
-            name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
-                    '_'+str(self.SUBN))
-            ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
-                                                     str(j)+'.pkl')))
-        for j in range(6):
-            name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
-                    'T_'+str(self.SUBN))
-            ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
-                                                     str(j)+'.pkl')))
+        if self.ROBUST == 1:
+            for j in range(6):
+                name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
+                        '_'+str(self.SUBN))
+                ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
+                                                         str(j)+'.pkl')))
+            for j in range(6):
+                name = ('/Sub_'+str(self.SUBN)+'/'+self.REGION+'_'+self.SUBJECT +
+                        'T_'+str(self.SUBN))
+                ClustersH.append(np.array(pd.read_pickle(st+name+'_' +
+                                                         str(j)+'.pkl')))
         self.SubclusH = np.array(ClustersH)
         self.MasclusH = np.array(pd.read_pickle(st+self.Name_M+'.pkl'))
         self.PCs = np.array(pd.read_pickle(self.Path_Datasave+'PCs/' +
@@ -122,6 +124,7 @@ class Brain_process(object):
         self.Masclus = MasterClusters
         self.Network = nx.Graph()
         self.Network.add_edges_from(edges)
+        self.Network.add_nodes_from(ss[np.arange(len(self.Masclus))])
         self.Netw_weights = weights
         self.Netw_setlist = setlist
         self.Netw_edges = edges
@@ -137,9 +140,15 @@ class Brain_process(object):
         for i in range(np.max(vals)+1):
             ke = keys[np.where(vals == i)[0]]
             if len(ke) >= 1:
-                Clusclus.append(keys[np.where(vals == i)[0]])
-                sets.append(setlist[Clusclus[i][1:].astype(int)])
-                char = keys[np.where(vals == i)[0]][0]
+                ke2 = [ke[0]]
+                for K in ke:
+                    try:
+                        ke2.append(int(K))
+                    except:
+                        continue
+                Clusclus.append(ke2)
+                sets.append(setlist[ke2[1:]])
+                char = ke2[1:]
                 weight_clus.append(weights[np.where(edges.T[0] == char)])
 
         ''' Select Louvain clusters and associated subclusters '''
@@ -167,10 +176,17 @@ class Brain_process(object):
                 cols.append(colors[self.Netw_setlist[int(i)]])
             except:
                 cols.append('silver')
+        edgeweights = []
+        for u, v in self.Network.edges():
+            try:
+                edgeweights.append(dicty[u, v])
+            except KeyError:
+                edgeweights.append(dicty[v, u])
+        edgeweights = np.array(edgeweights)
         pos = nx.nx_agraph.graphviz_layout(self.Network, prog='neato')
         fig, ax = plt.subplots(figsize=(15, 15))
         nx.draw(self.Network, pos, node_size=1000, node_color=cols,
-                width=0.1+5*self.Netw_weights**2)
+                width=0.1+5*edgeweights**2)
         nx.draw_networkx_labels(self.Network, pos, font_size=15)
         nx.draw_networkx_edge_labels(self.Network, pos, edge_labels=dicty)
         ax.text(0.0, 0.95+1*0.03, 'Sets of '+str(int(self.SUBN/1000))+' sec:',
@@ -216,6 +232,6 @@ class Brain_process(object):
         dicty['Act'] = self.Datacat
         dicty[self.REGION] = Cluster_series
         DF = pd.DataFrame(dicty)
-        DF[self.REGION][~DF[self.REGION].isin(self.MasClus_s)] = '-'
+        DF[self.REGION][~DF[self.REGION].isin(ss)] = '-'  # Cover all ms
         self.DF = DF
         self.DF.to_pickle(self.Path_Datasave+'ActiveClusters/'+self.Name_M+'.pkl')

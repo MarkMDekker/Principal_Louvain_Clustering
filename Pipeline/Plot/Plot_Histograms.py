@@ -9,8 +9,9 @@
 import pandas as pd
 import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+from tqdm import tqdm3
 path_clus = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
              'Output/ActiveClusters/F_')
 
@@ -20,7 +21,8 @@ path_clus = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
 
 # 339295
 # 279418
-NUM = '339295'
+# '279418T'
+NUM = '279418'
 
 # ----------------------------------------------------------------- #
 # Read data
@@ -51,7 +53,6 @@ def simultaneity(set1, set2, clus1, clus2):
 
 sets = [HIP, PFC, PAR]
 clus = list(np.unique(PAR)[:])+list(np.unique(PFC)[:])+list(np.unique(HIP)[:])
-clus = np.array(clus)[np.array(clus) != '-']
 sets = []
 for i in range(len(clus)):
     if clus[i][:3] == 'HIP': sets.append(HIP)
@@ -77,7 +78,6 @@ def Expl(clus):
     s3 = len(np.where(ACT[which] == 3)[0])/len(which)
     return s0, s1, s2, s3
     
-#%%
 # ----------------------------------------------------------------- #
 # Edges and adjacency matrix
 # ----------------------------------------------------------------- #
@@ -100,51 +100,26 @@ for i in range(len(clus)):
     s0, s1, s2, s3 = Expl(clus[i])
     dictperc[clus[i][:3]+' '+clus[i][4]] = [s1/AvMov, s2/AvExp]
 
+#%%
 # ----------------------------------------------------------------- #
-# Plot graph
+# Create histogram from edge and node labels
 # ----------------------------------------------------------------- #
 
-Network = nx.Graph()
-Network.add_edges_from(edges)
-we = []
-dicty2 = {}
-for u,v in Network.edges:
-    try:
-        we.append(dicty[(u, v)])
-    except:
-        we.append(dicty[(v, u)])
-    dicty2[(u, v)] = we[-1]
-labels = {}
-ns = []
-cols2 = []
-for node in Network.nodes():
-    percs = dictperc[node]
-    ns.append(percs[1])
-    labels[node] = node+'\n'+str(np.round(percs[1],2))
-    cols2.append(plt.cm.coolwarm((percs[1]-1)/1.5+0.5))
-ns = np.array(ns)
-we = np.array(we)
-colors = ['forestgreen', 'tomato', 'steelblue', 'orange', 'violet',
-          'brown']
-cols = []
-for i in Network.nodes:
-    if i[:3] == 'PAR': cols.append(colors[0])
-    if i[:3] == 'PFC': cols.append(colors[1])
-    if i[:3] == 'HIP': cols.append(colors[2])
-pos = nx.nx_agraph.graphviz_layout(Network, prog='neato')
-fig, ax = plt.subplots(figsize=(15, 15))
-nx.draw(Network, pos, node_size=3000, node_color=cols2,
-        width=0.1+10*we)
-ax = plt.gca()
-ax.collections[0].set_edgecolor('k') 
-nx.draw_networkx_labels(Network, pos, labels, font_size=14)
-nx.draw_networkx_edge_labels(Network, pos, edge_labels=dicty2)
-lst = ['PAR', 'PFC', 'HIP']
-# for i in range(len(lst)):
-#     ax.text(0.02, 0.95-i*0.02, lst[i], color=colors[i],
-#             fontsize=15, transform=ax.transAxes)
-ax.text(0.98, 0.02, 'Threshold of '+str(TH), color='k',
-        fontsize=15, transform=ax.transAxes, ha='right', va='bottom')
-ax.text(0.02, 0.02, 'Rodent '+NUM, color='k',
-        fontsize=15, transform=ax.transAxes, ha='left', va='bottom')
-#plt.savefig(Path_Figsave+'Simultaneity/'+NUM+'_v2.png', bbox_inches='tight', dpi=200)
+nodelabels = np.array(list(dictperc.values())).T[1]
+edgelabels = np.copy(AdjMat[AdjMat > 0])
+mean = np.mean(edgelabels)
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+ax1.hist(edgelabels, bins=np.linspace(0, 1, 50))
+ax1.set_ylim([ax1.get_ylim()[0], ax1.get_ylim()[1]])
+ax1.plot([mean, mean], [-1e3, 1e3], 'k', lw=2, zorder=1)
+ax1.set_xlabel('Simultaneity (nonzero edge labels)'+'\n' +
+               'Total: '+str(len(edgelabels)), fontsize=15)
+
+ax2.hist(nodelabels, bins=np.linspace(0, 2, 25))
+ax2.set_ylim([ax2.get_ylim()[0], ax2.get_ylim()[1]])
+ax2.plot([1, 1], [-1e3, 1e3], 'k', lw=2, zorder=1)
+ax2.set_xlabel('Exploration bias (node labels)'+'\n' +
+               'Total: '+str(len(nodelabels)), fontsize=15)
+
+fig.tight_layout()
