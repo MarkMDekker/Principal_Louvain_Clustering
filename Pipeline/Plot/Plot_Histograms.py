@@ -11,7 +11,6 @@ import networkx as nx
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from tqdm import tqdm3
 path_clus = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
              'Output/ActiveClusters/F_')
 

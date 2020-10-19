@@ -23,15 +23,15 @@ path_clus = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
 # ----------------------------------------------------------------- #
 # Input
 # 339295
-# 346110
 # 279418
 # ----------------------------------------------------------------- #
 
 N = -1
-SUB = '279418'
+SUB = '346110'
 res = 200
 tau = 30
 regions = ['HIP', 'PAR', 'PFC']
+CAT = 1
 
 # ----------------------------------------------------------------- #
 # Calculations
@@ -47,6 +47,16 @@ PAR = np.array(pd.read_pickle(path_clus+'PAR_'+SUB+'.pkl').PAR)
 PAR = np.array(['PAR_'+i for i in PAR])
 PAR[PAR == 'PAR_-'] = '-'
 ACT = np.array(pd.read_pickle(path_clus+'PAR_'+SUB+'.pkl').Act)
+clus = list(np.unique(PAR)[:])+list(np.unique(PFC)[:])+list(np.unique(HIP)[:])
+
+if CAT == 1:
+    HIP = HIP[ACT == 1]
+    PFC = PFC[ACT == 1]
+    PAR = PAR[ACT == 1]
+if CAT == 2:
+    HIP = HIP[ACT > 1]
+    PFC = PFC[ACT > 1]
+    PAR = PAR[ACT > 1]
 
 
 def simultaneity(set1, set2, clus1, clus2):
@@ -71,7 +81,6 @@ def Expl(clus):
 
 
 sets = [HIP, PFC, PAR]
-clus = list(np.unique(PAR)[:])+list(np.unique(PFC)[:])+list(np.unique(HIP)[:])
 clus = np.array(clus)[np.array(clus) != '-']
 sets = []
 for i in range(len(clus)):
@@ -91,4 +100,4 @@ for i in tqdm(range(len(clus))):
             AdjMat[j, i] = AdjMat[i, j]
 
 # Save matrix
-pd.DataFrame(AdjMat).to_pickle(pathact+'../Simultaneity/'+SUB+'.pkl')
+pd.DataFrame(AdjMat).to_pickle(pathact+'../Simultaneity/'+SUB+'_'+str(CAT)+'.pkl')

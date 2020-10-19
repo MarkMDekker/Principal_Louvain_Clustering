@@ -21,13 +21,20 @@ path_clus = ('/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/'
 
 # ----------------------------------------------------------------- #
 # Input
+# 339295
+# 279418
 # ----------------------------------------------------------------- #
 
 N = -1
-SUB = '339295'
+SUB = '346110'
 res = 200
 tau = 30
 regions = ['HIP', 'PAR', 'PFC']
+CAT = 0 # 0 = all, 1 = nonexpl, 2 = expl, 3 = diff
+TH = 0.3#0.075
+
+cmap1 = plt.cm.coolwarm
+cmap2 = plt.cm.Greys
 
 # ----------------------------------------------------------------- #
 # Start figure
@@ -86,10 +93,15 @@ for i in range(len(clus)):
     if clus[i][:3] == 'PAR': sets.append(PAR)
 AvMov = len(np.where(ACT == 1)[0])/len(ACT)
 AvExp = len(np.where(ACT >= 2)[0])/len(ACT)
-TH = 0.25
 edges = []
 dicty = {}
-AdjMat = np.array(pd.read_pickle(pathact+'../Simultaneity/'+SUB+'.pkl'))
+if CAT != 3:
+    AdjMat = np.array(pd.read_pickle(pathact+'../Simultaneity/'+SUB+'_' +
+                                     str(CAT)+'.pkl'))
+else:
+    AdjMat1 = np.array(pd.read_pickle(pathact+'../Simultaneity/'+SUB+'_1.pkl'))
+    AdjMat2 = np.array(pd.read_pickle(pathact+'../Simultaneity/'+SUB+'_2.pkl'))
+    AdjMat = AdjMat2 - AdjMat1
 for i in tqdm(range(len(clus))):
     for j in range(i, len(clus)):
         if i != j:
@@ -98,6 +110,7 @@ for i in tqdm(range(len(clus))):
                               clus[j][:3]+' '+clus[j][4]))
                 dicty[edges[-1]] = np.round(AdjMat[i, j], 2)
 dictperc = {}
+vals = list(dicty.values())
 for i in range(len(clus)):
     s0, s1, s2, s3 = Expl(clus[i])
     dictperc[clus[i][:3]+' '+clus[i][4]] = [s1/AvMov, s2/AvExp]
@@ -108,12 +121,15 @@ Network.add_nodes_from(list(dictperc.keys()))
 Network.add_edges_from(edges)
 we = []
 dicty2 = {}
+colse = []
 for u,v in Network.edges:
     try:
         we.append(dicty[(u, v)])
     except:
         we.append(dicty[(v, u)])
     dicty2[(u, v)] = we[-1]
+    colse.append('k')#cmap2((we[-1]-np.min(vals)
+                      #            )/(np.max(vals)-np.min(vals))))
 labels = {}
 ns = []
 cols2 = []
@@ -121,7 +137,7 @@ for node in Network.nodes():
     percs = dictperc[node]
     ns.append(percs[1])
     labels[node] = node+'\n'+str(np.round(percs[1],2))
-    cols2.append(plt.cm.coolwarm((percs[1]-1)/1.5+0.5))
+    cols2.append(cmap1((percs[1]-1)/1.5+0.5))
 ns = np.array(ns)
 we = np.array(we)
 colors = ['forestgreen', 'tomato', 'steelblue', 'orange', 'violet',
@@ -132,10 +148,10 @@ for i in Network.nodes:
     if i[:3] == 'PFC': cols.append(colors[1])
     if i[:3] == 'HIP': cols.append(colors[2])
 pos = nx.nx_agraph.graphviz_layout(Network, prog='neato')
-nx.draw(Network, pos, node_size=2500, node_color=cols2,
-        width=0.1+10*we, ax=axa)
+nx.draw(Network, pos, node_size=2000, node_color=cols2,
+        width=0.25+25*we**2, ax=axa, edge_color=colse)
 axa.collections[0].set_edgecolor('k')
-nx.draw_networkx_labels(Network, pos, labels, font_size=13, ax=axa)
+nx.draw_networkx_labels(Network, pos, labels, font_size=11, ax=axa)
 nx.draw_networkx_edge_labels(Network, pos, edge_labels=dicty2, ax=axa)
 lst = ['PAR', 'PFC', 'HIP']
 # for i in range(len(lst)):
@@ -145,6 +161,12 @@ axa.text(0.02, 0.01, 'Threshold of '+str(TH), color='k',
          fontsize=15, transform=axa.transAxes, ha='left', va='bottom')
 axa.text(0.02, 0.04, 'Rodent '+SUB, color='k',
          fontsize=15, transform=axa.transAxes, ha='left', va='bottom')
+if CAT == 0: s = 'Both Exploring & not exploring'
+if CAT == 1: s = 'Not exploring'
+if CAT == 2: s = 'Exploring'
+if CAT == 3: s = 'Difference exploring - not exploring'
+axa.text(0.5, 0.99, s, color='k',
+         fontsize=15, transform=axa.transAxes, ha='center', va='top')
 
 # ----------------------------------------------------------------- #
 # ----------------------------------------------------------------- #
@@ -194,8 +216,7 @@ for PLOT in range(3):
     # Retrieve phase-space, calculate locations and rates
     # --------------------------------------------------------------------- #
 
-    space = np.linspace(np.floor(np.min([Xpc, Ypc])),
-                        np.floor(np.max([Xpc, Ypc]))+1, res)
+    space = np.linspace(-12, 12, res)
     H, xedges, yedges = np.histogram2d(Xpc, Ypc, bins=[space, space])
     xedges2 = (xedges[:-1] + xedges[1:])/2.
     yedges2 = (yedges[:-1] + yedges[1:])/2.
@@ -222,7 +243,7 @@ for PLOT in range(3):
     # Create 2D and mask
     # --------------------------------------------------------------------- #
 
-    Clus2d = func12(ExisC).T
+    Clus2d = func12(ExisC)
     Clus2d_inv = np.copy(Clus2d)
     Clus2d_inv[np.isnan(Clus2d)] = 0
     Clus2d_inv[~np.isnan(Clus2d)] = np.nan
@@ -249,12 +270,12 @@ for PLOT in range(3):
     ss = np.array(['A','B','C','D','E','F','G','H','I','J','K','L','M','N'])
     nclus = len(np.unique(Clus2d[~np.isnan(Clus2d)]))
     #ax.pcolormesh(Xvec, Yvec, Clus2d, cmap=plt.cm.Blues, vmin=-0.2, vmax=15)
-    ax.pcolormesh(Xvec, Yvec, Clus2d_v3, cmap=plt.cm.coolwarm, vmin=0, vmax=2)#, edgecolors='k', linewidths=0.1)
+    ax.pcolormesh(Xvec, Yvec, Clus2d_v3, cmap=cmap1, vmin=0, vmax=2)#, edgecolors='k', linewidths=0.1)
     #ax.pcolormesh(Xvec, Yvec, Clus2d_inv, cmap=plt.cm.Greys, vmin=0, vmax=1)
     for i in range(int(np.nanmax(Clus2d)+1)):
         whX, whY = np.where(Clus2d == i)
-        ax.text(np.median(Xvec[whY]), np.median(Yvec[whX]), ss[i], fontsize=11,
-                bbox=dict(facecolor='w', alpha=0.6, edgecolor='k', lw=0.5,
+        ax.text(np.median(Xvec[whY]), np.median(Yvec[whX]), ss[i], fontsize=8,
+                bbox=dict(facecolor='w', alpha=0.4, edgecolor='k', lw=0.15,
                           boxstyle='round'), ha='center', va='center')
     if PLOT == 2:
         ax.set_xlabel('Principal Component 1', fontsize=15)
@@ -270,4 +291,5 @@ for PLOT in range(3):
     ax.text(0.5, 0.95, REG, fontsize=13, transform=ax.transAxes, va='top',
             ha='center')
 fig.tight_layout()
-#plt.savefig(Path_Figsave+'Rodent'+str(SUB)+'.png', bbox_inches='tight', dpi=200)
+plt.savefig(Path_Figsave+'Simultaneity/'+str(SUB)+'_'+str(CAT)+'.png',
+            bbox_inches='tight', dpi=200)

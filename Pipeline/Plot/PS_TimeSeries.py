@@ -12,6 +12,7 @@ from tqdm import tqdm
 import networkx as nx
 import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import sys
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter
@@ -141,7 +142,7 @@ mx = 8
 # ----------------------------------------------------------------- #
 # ----------------------------------------------------------------- #
 
-T = 400000
+T = 200000
 
 for PLOT in range(3):
     ax = plt.subplot(gs[PLOT])
@@ -150,17 +151,19 @@ for PLOT in range(3):
         Name = 'F_'+REG+'_'+SUB
     else:
         Name = REG+'_'+SUB+'_'+str(N)
-    
-    pc1 = windowmean(dictsets1[REG][T-3000:T], 1)
-    pc2 = windowmean(dictsets2[REG][T-3000:T], 1)
-    
+
+    pc1 = windowmean(dictsets1[REG][T-10000:T], 250)
+    pc2 = windowmean(dictsets2[REG][T-10000:T], 250)
+    #pc1 = pc1[::10]
+    #pc2 = pc2[::10]
+
     #ax.plot(pc1, pc2, 'w', lw=0.25, zorder=1e999)
-    ax.scatter(pc1, pc2, s=15, c=range(len(pc1)), cmap=plt.cm.Greens, zorder=1e999+1)
-    
+    ax.scatter(pc1, pc2, s=5, c=range(len(pc1)), cmap=plt.cm.Greens, zorder=1e999+1)
+
     # ----------------------------------------------------------------- #
     # Read data
     # ----------------------------------------------------------------- #
-    
+
     ss = np.array(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
                    'L', 'M', 'N'])
     config = configparser.ConfigParser()
@@ -272,4 +275,11 @@ for PLOT in range(3):
     if PLOT == 0:
         ax.text(0.02, 0.98, 'Rodent '+SUB, fontsize=15, va='top',
                 transform=ax.transAxes)
+axc = fig.add_axes([0.91, 0.13, 0.02, 0.75])
+norm = mpl.colors.Normalize(vmin=0, vmax=10)
+cb1 = mpl.colorbar.ColorbarBase(axc, cmap=plt.cm.Greens, norm=norm,
+                                orientation='vertical')
+cb1.set_label('Elapsed time in window (sec)', fontsize=15)
+axc.tick_params(labelsize=13)
 fig.tight_layout()
+plt.savefig(Path_Figsave+'PSmovement/'+str(SUB)+'_'+str(T)+'.png', bbox_inches='tight', dpi=200)

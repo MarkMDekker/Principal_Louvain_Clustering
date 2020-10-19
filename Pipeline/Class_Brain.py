@@ -7,9 +7,9 @@
 # ----------------------------------------------------------------- #
 
 import configparser
-import networkx as nx
 import sys
 import scipy.io
+import networkx as nx
 from community import community_louvain
 from community import modularity
 from tqdm import tqdm
@@ -44,7 +44,7 @@ class Brain(object):
         self.N = int(config['PARAMS']['N'])
         self.F_LOW = int(config['PARAMS']['F_LOW'])
         self.F_HIGH = int(config['PARAMS']['F_HIGH'])
-        self.SUBPART = config['PARAMS']['SUBPART']
+        self.SUBPART = params_input['SUBPART']
         self.WS = int(config['PARAMS']['WINDOW'])
         self.TAU = int(config['PARAMS']['TAU'])
         self.RES = int(config['PARAMS']['RES'])
@@ -136,17 +136,35 @@ class Brain(object):
             self.Synchronization = np.array(synchr_region)
             self.ResidualSeries_raw = np.array(RelPower_region)
             self.ResidualSeries = ProcessPower(self.ResidualSeries_raw)
-        else:
+            self.Datacat[self.WS:self.N-self.WS-1]
+        elif self.SUBJECT != '339296': # Exception when no test data is available
             name = self.REGION+'_'+self.SUBJECT
             Sync1 = np.array(pd.read_pickle(self.Path_Datasave+'Synchronization/'+name+'.pkl'))
             Sync2 = np.array(pd.read_pickle(self.Path_Datasave+'Synchronization/'+name+'T.pkl'))
-            self.Synchronization = np.array(list(Sync1)+list(Sync1)).T[0]
+            self.Synchronization = np.array(list(Sync1)+list(Sync2)).T[0]
+
+            Cat1 = np.array(pd.read_pickle(self.Path_Datasave+'Exploration/'+name+'.pkl'))
+            Cat2 = np.array(pd.read_pickle(self.Path_Datasave+'Exploration/'+name+'T.pkl'))
+            self.Datacat = np.array(list(Cat1)+list(Cat2)).T[0]
 
             Res1 = np.array(pd.read_pickle(self.Path_Datasave+'ResidualSeries/'+name+'.pkl'))
             Res2 = np.array(pd.read_pickle(self.Path_Datasave+'ResidualSeries/'+name+'T.pkl'))
             self.ResidualSeries = []
             for i in range(len(Res1)):
                 self.ResidualSeries.append(list(Res1[i])+list(Res2[i]))
+            self.ResidualSeries = np.array(self.ResidualSeries)
+        else:
+            name = self.REGION+'_'+self.SUBJECT
+            Sync1 = np.array(pd.read_pickle(self.Path_Datasave+'Synchronization/'+name+'.pkl'))
+            self.Synchronization = np.array(list(Sync1)).T[0]
+
+            Cat1 = np.array(pd.read_pickle(self.Path_Datasave+'Exploration/'+name+'.pkl'))
+            self.Datacat = np.array(list(Cat1)).T[0]
+
+            Res1 = np.array(pd.read_pickle(self.Path_Datasave+'ResidualSeries/'+name+'.pkl'))
+            self.ResidualSeries = []
+            for i in range(len(Res1)):
+                self.ResidualSeries.append(list(Res1[i]))
             self.ResidualSeries = np.array(self.ResidualSeries)
 
     def pca(self):
@@ -162,7 +180,7 @@ class Brain(object):
         ''' Put EOFs and PCs in arrays '''
         EOFs = []
         PCs = []
-        for i in range(len(self.ResidualSeries)):
+        for i in range(25):#len(self.ResidualSeries)):
             EOFs.append(vecs[:, i])
             PCs.append(vecs[:, i].dot(self.ResidualSeries))
 
@@ -176,8 +194,7 @@ class Brain(object):
         ''' Create space '''
         Xpc = self.PCs[self.PCX]
         Ypc = self.PCs[self.PCY]
-        self.space = np.linspace(np.floor(np.min([Xpc, Ypc])),
-                                 np.floor(np.max([Xpc, Ypc]))+1, self.RES)
+        self.space = np.linspace(-12, 12, self.RES)
 
         ''' Determine histogram '''
         H, xedges, yedges = np.histogram2d(Xpc, Ypc, bins=[self.space,
@@ -193,8 +210,8 @@ class Brain(object):
         ye = np.array([yedges2]*len(Xpc[T1:T2]))
         Locations = []
         for j in [0, self.TAU]:
-            xe_arg = np.abs(xe.T-Ypc[T1+j:T2+j]).argmin(axis=0)
-            ye_arg = np.abs(ye.T-Xpc[T1+j:T2+j]).argmin(axis=0)
+            xe_arg = np.abs(xe.T-Xpc[T1+j:T2+j]).argmin(axis=0)
+            ye_arg = np.abs(ye.T-Ypc[T1+j:T2+j]).argmin(axis=0)
             Locations.append(ye_arg*len(xedges2)+xe_arg)
         Locations = np.array(Locations)
 
@@ -259,6 +276,23 @@ class Brain(object):
         DF['Cluster'] = clus
         self.ClusterDF = DF
 
+    def get_from_file(self):
+        ''' Get residual series from previous files '''
+
+        if self.N > 500000:
+            Run = self.REGION+'_'+self.SUBJECT
+        else:
+            Run = ('Sub_'+str(self.N)+'/'+self.REGION+'_'+self.SUBJECT+'_' +
+                   str(self.N)+'_'+str(self.SUBPART))
+        if self.FULL == 1:
+            Run = 'F_'+Run
+        self.ResidualSeries = np.array(pd.read_pickle(self.Path_Datasave +
+                                                      'ResidualSeries/'+Run +
+                                                      '.pkl'))
+        # self.Datacat = np.array(pd.read_pickle(self.Path_Datasave +
+        #                                        'Exploration/'+Run +
+        #                                        '.pkl'))
+
     def save_to_file(self):
         ''' Save all important variables for future use '''
 
@@ -269,8 +303,11 @@ class Brain(object):
                    str(self.N)+'_'+str(self.SUBPART))
         if self.FULL == 1:
             Run = 'F_'+Run
-        pd.DataFrame(self.ClusterDF).to_pickle(self.Path_Datasave +
-                                               'Clusters/'+Run+'.pkl')
+        try:
+            pd.DataFrame(self.ClusterDF).to_pickle(self.Path_Datasave +
+                                                   'Clusters/'+Run+'.pkl')
+        except:
+            3
         pd.DataFrame(self.EOFs).to_pickle(self.Path_Datasave +
                                           'EOFs/'+Run+'.pkl')
         pd.DataFrame(self.PCs).to_pickle(self.Path_Datasave +
@@ -283,3 +320,5 @@ class Brain(object):
         pd.DataFrame(self.ResidualSeries).to_pickle(self.Path_Datasave +
                                                     'ResidualSeries/'+Run +
                                                     '.pkl')
+        pd.DataFrame(self.Datacat).to_pickle(self.Path_Datasave +
+                                             'Exploration/'+Run+'.pkl')

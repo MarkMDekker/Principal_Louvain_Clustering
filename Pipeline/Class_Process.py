@@ -201,8 +201,7 @@ class Brain_process(object):
         ''' Create space '''
         Xpc = self.PCs[self.PCX]
         Ypc = self.PCs[self.PCY]
-        self.space = np.linspace(np.floor(np.min([Xpc, Ypc])),
-                                 np.floor(np.max([Xpc, Ypc]))+1, self.RES)
+        self.space = np.linspace(-12, 12, self.RES)
 
         ''' Determine histogram '''
         H, xedges, yedges = np.histogram2d(Xpc, Ypc, bins=[self.space,
@@ -214,8 +213,8 @@ class Brain_process(object):
         ''' Determine Locations '''
         xe = np.array([xedges2]*len(Ypc))
         ye = np.array([yedges2]*len(Xpc))
-        xe_arg = np.abs(xe.T-Ypc).argmin(axis=0)
-        ye_arg = np.abs(ye.T-Xpc).argmin(axis=0)
+        xe_arg = np.abs(xe.T-Xpc).argmin(axis=0)
+        ye_arg = np.abs(ye.T-Ypc).argmin(axis=0)
         Locations = np.array(ye_arg*len(xedges2)+xe_arg)
         self.Locations = Locations
 
@@ -235,3 +234,4 @@ class Brain_process(object):
         DF[self.REGION][~DF[self.REGION].isin(ss)] = '-'  # Cover all ms
         self.DF = DF
         self.DF.to_pickle(self.Path_Datasave+'ActiveClusters/'+self.Name_M+'.pkl')
+        pd.DataFrame(self.Locations).to_pickle(self.Path_Datasave+'Locations/'+self.Name_M+'.pkl')
