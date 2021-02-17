@@ -16,7 +16,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from Functions import Standardize, RemovePowerlaw2, Abundances, ProcessPower
+from Functions import Standardize, RemovePowerlaw2b, Abundances, ProcessPower
 from Functions import func12, func21
 from scipy.fftpack import rfftfreq, rfft
 import warnings
@@ -35,9 +35,9 @@ class Brain(object):
         config.read('config.ini')
 
         ''' Dataset '''
-        self.SUBJECT = config['DATASET']['SUBJECT']
-        self.TYPE = config['DATASET']['TYPE']
-        self.REGION = config['DATASET']['REGION']
+        self.SUBJECT = params_input['SUBJECT']
+        self.TYPE = params_input['TYPE']
+        self.REGION = params_input['REGION']
         self.FULL = int(config['DATASET']['FULL'])
 
         ''' Important constants '''
@@ -59,8 +59,12 @@ class Brain(object):
         ''' Read dataset '''
         self.RawData = scipy.io.loadmat(self.Path_Data+self.SUBJECT+'_' +
                                         self.TYPE+'.mat')
-        self.Datacat = self.RawData['interpolatedCategory']
-        self.DataEEG = self.RawData['EEG'][0][0][15]
+        if self.TYPE == 'TRAINING' and self.SUBJECT == '340233':
+            D = scipy.io.loadmat(self.Path_Data+'Cat_340223_Training.mat')
+            self.Datacat = D['interpolatedCategory']
+        else:
+            self.Datacat = self.RawData['interpolatedCategory']
+        self.DataEEG = self.RawData['EEG'][0][0][9]  # 15 before
         if self.N == -1:
             self.N = len(self.Datacat[0])
         if self.TYPE == 'TEST':
@@ -113,10 +117,16 @@ class Brain(object):
                 the power laws '''
             RelPower_region = []
             synchr_region = []
-            for step in tqdm(range(self.WS, self.N-self.WS), file=sys.stdout):
+            tvec = np.arange(self.WS, self.N-self.WS)
+            A = np.zeros(shape=(len(tvec), len(self.SEEG)))
+            B = np.zeros(shape=(len(tvec), len(self.SEEG)))
+            for stepi in tqdm(range(len(tvec)), file=sys.stdout):
+                step = tvec[stepi]
                 Data_step = self.SEEG[:, step-self.WS:step+self.WS]
                 RelPower_node = []
                 ffts = []
+                As = []
+                Bs = []
     
                 ''' Per node in this brain region '''
                 for node in range(len(Data_step)):
@@ -126,13 +136,17 @@ class Brain(object):
                     FFT = FFT/np.nansum(FFT)
     
                     ''' Remove power law '''
-                    FFTn = RemovePowerlaw2(FFT, frq, Hz1, Hz2)
+                    a, b, FFTn = RemovePowerlaw2b(FFT, frq, Hz1, Hz2)
                     ffts.append(FFTn)
+                    A[stepi, node] = a
+                    B[stepi, node] = b
     
                     ''' Calculate relative power, binned per Hz-segment '''
                     RelPower_node.append(Abundances(FFTn, frq, borders, freq_ind))
                 synchr_region.append(np.nanmean(np.corrcoef(ffts)))
                 RelPower_region.append(np.nanmean(RelPower_node, axis=0))
+            self.A = A
+            self.B = B
             self.Synchronization = np.array(synchr_region)
             self.ResidualSeries_raw = np.array(RelPower_region)
             self.ResidualSeries = ProcessPower(self.ResidualSeries_raw)
@@ -308,17 +322,23 @@ class Brain(object):
                                                    'Clusters/'+Run+'.pkl')
         except:
             3
-        pd.DataFrame(self.EOFs).to_pickle(self.Path_Datasave +
-                                          'EOFs/'+Run+'.pkl')
-        pd.DataFrame(self.PCs).to_pickle(self.Path_Datasave +
-                                         'PCs/'+Run+'.pkl')
+        #pd.DataFrame(self.EOFs).to_pickle(self.Path_Datasave +
+        #                                  'EOFs/'+Run+'.pkl')
+        #pd.DataFrame(self.PCs).to_pickle(self.Path_Datasave +
+        #                                 'PCs/'+Run+'.pkl')
         pd.DataFrame(self.Synchronization).to_pickle(self.Path_Datasave +
                                                      'Synchronization/'+Run +
                                                      '.pkl')
-        pd.DataFrame(self.Eigenvalues).to_pickle(self.Path_Datasave +
-                                                 'Eigenvalues/'+Run+'.pkl')
+        pd.DataFrame(self.Synchronization).to_pickle(self.Path_Datasave +
+                                                     'Synchronization/'+Run +
+                                                     '.pkl')
+        #pd.DataFrame(self.Eigenvalues).to_pickle(self.Path_Datasave +
+        #                                         'Eigenvalues/'+Run+'.pkl')
         pd.DataFrame(self.ResidualSeries).to_pickle(self.Path_Datasave +
                                                     'ResidualSeries/'+Run +
                                                     '.pkl')
         pd.DataFrame(self.Datacat).to_pickle(self.Path_Datasave +
                                              'Exploration/'+Run+'.pkl')
+        if self.FULL == 0:
+            pd.DataFrame(self.A).to_csv(self.Path_Datasave+'A/'+Run+'.csv')
+            pd.DataFrame(self.B).to_csv(self.Path_Datasave+'B/'+Run+'.csv')

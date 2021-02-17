@@ -52,4 +52,4 @@ for i in range(3):
             ax.set_xlabel('Frequency band (Hz)')
 
 fig.tight_layout()
-plt.savefig(path_figsave+'Eigenvectors.png', bbox_inches='tight', dpi=200)
+#plt.savefig(path_figsave+'Eigenvectors.png', bbox_inches='tight', dpi=200)

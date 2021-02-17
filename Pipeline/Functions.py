@@ -73,6 +73,10 @@ def fc(x, a, b):
     return x**a * b
 
 
+def fc2(x, a, b, c):
+    return x**a * b + c
+
+
 def RemovePowerlaw2(Data, frq, Hz1, Hz2):
     data = Data[Hz1:Hz2]
     try:
@@ -81,6 +85,39 @@ def RemovePowerlaw2(Data, frq, Hz1, Hz2):
         popt = [np.nan, np.nan]
     residual = data - fc(frq, popt[0], popt[1])
     return np.array(residual)
+
+
+
+def RemovePowerlaw2a(Data, frq, Hz1, Hz2):
+    data = Data[Hz1:Hz2]
+    try:
+        popt, pcov = curve_fit(fc, frq, data, p0=[-0.5, 0.02])
+    except:
+        popt = [np.nan, np.nan]
+    residual = data - fc(frq, popt[0], popt[1])
+    return popt[0], popt[1], np.array(residual)
+
+
+
+def RemovePowerlaw2b(Data, frq, Hz1, Hz2):
+    data = Data[Hz1:Hz2]
+    try:
+        popt, pcov = curve_fit(fc, frq[1:], data[1:], p0=[-1, 0.02], maxfev=2000)
+    except:
+        popt = [np.nan, np.nan, np.nan]
+    residual = data - fc(frq, popt[0], popt[1])
+    return popt[0], popt[1], np.array(residual)
+
+
+
+def RemovePowerlaw3(Data, frq, Hz1, Hz2):
+    data = Data[Hz1:Hz2]
+    try:
+        popt, pcov = curve_fit(fc2, frq[1:], data[1:], p0=[-0.5, 0.02, 0], maxfev=2000)
+    except:
+        popt = [np.nan, np.nan, np.nan]
+    residual = data - fc2(frq, popt[0], popt[1], popt[2])
+    return popt[0], popt[1], popt[2], residual
 
 
 def ProcessPower(RelativePower):
