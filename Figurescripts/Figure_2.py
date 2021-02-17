@@ -18,8 +18,8 @@ warnings.filterwarnings("ignore")
 # Input
 # ----------------------------------------------------------------- #
 
-SUBs = ['279418', '279419', '339295', '339296']#, '340233', '341319',
-        #'341321', '346110', '346111', '347640', '347641']
+SUBs = ['279418', '279419', '339295', '339296', '340233', '341319',
+        '341321', '346110', '346111', '347640', '347641']
 REGs = ['HIP', 'PAR', 'PFC']
 
 # ----------------------------------------------------------------- #
@@ -58,7 +58,6 @@ for fig_col in range(3):
         
         for sub_i in range(len(SUBs)):
             col = plt.cm.Spectral_r(sub_i/len(SUBs))
-            #if SUBs[sub_i] == '346111':
             ax.plot(Freqs, eofs[fig_row][fig_col][SUBs[sub_i]], c=col, lw=0.75, label=SUBs[sub_i])
             
         ax.plot(Freqs, eofs[fig_row][fig_col]['Average'], 'k', lw=1)
@@ -93,4 +92,4 @@ for fig_col in range(3):
         ax.text(0.01, 0.98, ss[int(3*fig_row+fig_col)]+' EOF '+str(fig_row+1),
                 fontsize=12, transform=ax.transAxes, va='top')
 fig.tight_layout()
-#plt.savefig(Path_Figsave+'Figure_2.png', bbox_inches='tight', dpi=200)
+plt.savefig(Path_Figsave+'Figure_2.png', bbox_inches='tight', dpi=200)
