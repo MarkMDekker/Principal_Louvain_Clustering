@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import axes3d
 Path_Figsave = ('/Users/mmdekker/Documents/Werk/Figures/Papers/2020_Brain/')
-savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
+savepath = '/Users/mmdekker/Documents/Werk/Data/Neuro/Processed/'
 
 # ----------------------------------------------------------------- #
 # Input
@@ -58,8 +58,8 @@ labels = np.copy(DF_loc)
 
 R = 12
 N = len(PC1_hip)
-C = 1
-fig = plt.figure(figsize=(10, 6))
+C = 4
+fig = plt.figure(figsize=(10, 8))
 ax = fig.gca(projection='3d')
 ax.view_init(45, -45)
 X, Y, Z = PC1_hip[:N], PC1_pfc[:N], PC1_par[:N]
@@ -74,16 +74,18 @@ Hy[Hy == 0] = np.nan
 mx = np.nanmax([Hx, Hy, Hz])
 mn = np.nanmin([Hx, Hy, Hz])
 Hx2, Hy2, Hz2 = np.array([Hx, Hy, Hz])
-Hz2[Hz < 15] = np.nan
-Hx2[Hx < 15] = np.nan
-Hy2[Hy < 15] = np.nan
+Hz2[Hz < 7] = np.nan
+Hx2[Hx < 7] = np.nan
+Hy2[Hy < 7] = np.nan
+
+B = 50
 
 xedges2 = (xedges[:-1] + xedges[1:])/2.
 yedges2 = (yedges[:-1] + yedges[1:])/2.
 xe, ye = np.meshgrid(xedges2, yedges2)
-ax.contourf(xe, Hy.T, ye, [0, 100], zdir='y', offset=R, colors='grey', zorder=5, linewidths=0.5)
-ax.contourf(xe, ye, Hz.T, [0, 100], zdir='z', offset=-R, colors='grey', zorder=-1, linewidths=0.5)
-ax.contourf(Hx.T, xe, ye, [0, 100], zdir='x', offset=-R, colors='grey', zorder=-1, linewidths=0.5)
+ax.contourf(xe, Hy.T, ye, [0, B], zdir='y', offset=R, colors='silver', zorder=5, linewidths=0.5)
+ax.contourf(xe, ye, Hz.T, [0, B], zdir='z', offset=-R, colors='silver', zorder=-1, linewidths=0.5)
+ax.contourf(Hx.T, xe, ye, [0, B], zdir='x', offset=-R, colors='silver', zorder=-1, linewidths=0.5)
 ax.contourf(xe, Hy2.T, ye, 100, zdir='y', offset=R, cmap=cmap1, zorder=-1, vmin=mn, vmax=mx)
 ax.contourf(xe, ye, Hz2.T, 100, zdir='z', offset=-R, cmap=cmap1, zorder=-1, vmin=mn, vmax=mx)
 ax.contourf(Hx2.T, xe, ye, 100, zdir='x', offset=-R, cmap=cmap1, zorder=-1, vmin=mn, vmax=mx)

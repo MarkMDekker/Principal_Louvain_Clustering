@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
+savepath = '/Users/mmdekker/Documents/Werk/Data/Neuro/Processed/'
 
 # ----------------------------------------------------------------- #
 # Read data

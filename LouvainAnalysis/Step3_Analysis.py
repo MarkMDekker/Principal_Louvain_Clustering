@@ -17,7 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import axes3d
 figpath = ('/Users/mmdekker/Documents/Werk/Figures/Figures_Side/Brain/'
            'Pics_20201020/')
-savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
+savepath = '/Users/mmdekker/Documents/Werk/Data/Neuro/Processed/'
 
 # ----------------------------------------------------------------- #
 # Input

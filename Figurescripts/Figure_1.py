@@ -94,6 +94,7 @@ av2 = 14.75/2
 k = 0.25
 ax1.plot([av1-k, av1+k, av2-k], [0.5, 0.5, 0.5], 'o', ms=15, color='forestgreen')
 ax1.plot([av2+k], [0.5], 'o', ms=15, color='tomato')
+ax1.text(av2+k, 0.5-0.1, 'New', fontsize=10, ha='center')
 ax1.text((1.25-0.5)/2+0.5, 0.42, '5 min', fontsize=12, ha='center', va='bottom')
 ax1.text((3-1.75)/2+1.75, 0.22, '10 min', fontsize=12, ha='center', va='bottom')
 ax1.text((4.25-3.5)/2+3.5, 0.42, '5 min', fontsize=12, ha='center', va='bottom')
@@ -147,7 +148,7 @@ ax4.text(av/100+0.1, -0.05, r'$t_0$', ha='center', va='center', transform=ax4.tr
 
 # Arrow in between
 ax5.text(0.5, 0.6, 'Apply FFT'+'\n'+'to window data', ha='center', va='bottom')
-ax5.text(0.5, 0.4, 'Fit and'+'\n'+r'subtract $b\cdot f^{a}$', ha='center', va='top')
+ax5.text(0.5, 0.4, 'Fit and'+'\n'+r'subtract $a\cdot f^{b}$', ha='center', va='top')
 ax5.text(0.5, 0.2, 'Average across'+'\n'+'electrodes in same'+'\n'+'brain region', ha='center', va='top')
 ax5.annotate("", xy=(0.75, 0.5), xytext=(0.25, 0.5), arrowprops=dict(arrowstyle="->"))
 
@@ -252,6 +253,23 @@ ax13.text(0.5, 0.25, 'and apply'+'\n'+'Louvain clustering', ha='center', va='top
 ax13.annotate("", xy=(0.75, 0.5), xytext=(0.25, 0.5), arrowprops=dict(arrowstyle="->"))
 ax13.axis('off')
 
+
+import sys
+def windowmean(Data, size):
+    ''' Function to compute a running window along a time series '''
+
+    if size == 1:
+        return Data
+    elif size == 0:
+        print('Size 0 not possible!')
+        sys.exit()
+    else:
+        Result = np.zeros(len(Data)) + np.nan
+        for i in range(np.int(size/2.), np.int(len(Data) - size/2.)):
+            Result[i] = np.nanmean(Data[i-np.int(size/2.):i+np.int(size/2.)])
+        return np.array(Result)
+
+
 ax14.set_xticks([])
 ax14.set_yticks([])
 ax14.set_xlim([-1, 2])
@@ -271,10 +289,19 @@ for x0 in np.arange(-0.25, 1.5, 0.25):
         y2 = np.array([y0+0.25]*len(x))
         y1 = np.array([y0]*len(x))
         ax14.fill_between(x, y1, y2, where=y2>=y1, alpha=0.5, color='steelblue')
-ax14.text(-0.4, 1.2, 'Cluster A')
-ax14.text(0.25, -0.3, 'Cluster B')
+ax14.text(-0.4, 1.2+0.6, 'Cluster A')
+ax14.text(0.25, -0.3-0.6, 'Cluster B')
 ax14.set_ylabel('PC1 HIP')
 ax14.set_xlabel('PC1 PAR')
+x1 = windowmean(np.random.random(size=25)*1.8-0.75, 2)
+y1 = windowmean(np.random.random(size=25)+0.75, 2)
+ax14.plot(x1, y1, '.', c='k')
+ax14.plot(x1, y1, c='k')
+x2 = windowmean(np.random.random(size=25)*1.8-0.25, 2)
+y2 = windowmean(np.random.random(size=25)-0.75, 2)
+ax14.plot(x2, y2, '.', c='k')
+ax14.plot(x2, y2, c='k')
+ax14.plot([x1[-3], x2[3]], [y1[-3], y2[3]], c='k')
 
 fig.tight_layout()
 plt.savefig(Path_Figsave+'Figure_1.png', bbox_inches='tight', dpi=200)

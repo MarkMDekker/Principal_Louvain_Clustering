@@ -43,11 +43,12 @@ Names = np.array(Names)
 
 # Separate covariance matrices
 CovMats = []
-for i in tqdm(range(len(Names))): # Regions
+for i in tqdm(range(len(Names))):  # Regions
     CovMati = []
-    for j in range(len(Names[0])): # Rodents
+    for j in range(len(Names[0])):  # Rodents
         Name = Names[i, j]
-        Series = np.array(pd.read_pickle(Path_Datasave+'ResidualSeries/F_'+Name))
+        Series = np.array(pd.read_pickle(Path_Datasave+'ResidualSeries/F_' +
+                                         Name))
         Series[np.isnan(Series)] = 0
         CovMat = Series.dot(Series.T)
         CovMati.append(CovMat)
@@ -63,27 +64,43 @@ AvCovMat = CovMats.mean(axis=1)
 # ----------------------------------------------------------------- #
 
 # Not-smoothed, separate
+Vals_ind = []
 EOFs_ind = np.zeros(shape=(3, len(SUBs), 2, 50))
 for rod in range(len(SUBs)):
+    valind = []
     for reg in range(3):
         vals, vecs = np.linalg.eig(CovMats[reg][rod])
         idx = vals.argsort()[::-1]
         vals = vals[idx]
         vecs = vecs[:, idx]
         vals_num = np.copy(vals/np.sum(vals))
+        valind.append(vals_num)
         for i in range(2):
             EOFs_ind[reg, rod, i] = vecs[:, i]
+    Vals_ind.append(valind)
 
 # Not-smoothed, average
 EOFs_av = np.zeros(shape=(3, 2, 50))
+Vals = []
 for reg in range(3):
     vals, vecs = np.linalg.eig(AvCovMat[reg])
     idx = vals.argsort()[::-1]
     vals = vals[idx]
     vecs = vecs[:, idx]
     vals_num = np.copy(vals/np.sum(vals))
+    Vals.append(vals_num)
     for i in range(2):
         EOFs_av[reg, i] = vecs[:, i]
+DF_vals = {}
+DF_vals['HIP'] = Vals[0]
+DF_vals['PAR'] = Vals[1]
+DF_vals['PFC'] = Vals[2]
+for rod in range(len(SUBs)):
+    for reg in range(len(REGs)):
+        nam = SUBs[rod]+'_'+REGs[reg]
+        DF_vals[nam] = Vals_ind[rod][reg]
+DF_vals = pd.DataFrame(DF_vals)
+DF_vals.to_csv('/Users/mmdekker/Documents/Werk/Data/Neuro/Processed/Spectra.csv')
 
 #%%
 # ----------------------------------------------------------------- #
@@ -159,64 +176,64 @@ newidx = np.random.choice(range(tot), size=tot, replace=False)
 for reg in tqdm(range(3)):
     PC1s_shuf[reg] = PC1s_shuf[reg][newidx]
     PC2s_shuf[reg] = PC2s_shuf[reg][newidx]
-# #%%
-# # ----------------------------------------------------------------- #
-# # Save files
-# # ----------------------------------------------------------------- #
+#%%
+# ----------------------------------------------------------------- #
+# Save files
+# ----------------------------------------------------------------- #
 
-# savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
+savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
 
-# for reg in range(3):
-#     REG = REGs[reg]
+for reg in range(3):
+    REG = REGs[reg]
 
-#     # EOF1
-#     DF_eof1 = {}
-#     DF_eof1['Average'] = EOFs_av[reg][0]
-#     for rod in range(len(SUBs)):
-#         SUB = SUBs[rod]
-#         eof = EOFs_ind[reg][rod][0]
-#         if np.corrcoef(eof, EOFs_av[reg][0])[0][1] < 0:
-#             eof = -eof
-#         DF_eof1[SUB] = eof
-#     pd.DataFrame(DF_eof1).to_csv(savepath+'EOF1/'+REG+'.csv')
+    # EOF1
+    DF_eof1 = {}
+    DF_eof1['Average'] = EOFs_av[reg][0]
+    for rod in range(len(SUBs)):
+        SUB = SUBs[rod]
+        eof = EOFs_ind[reg][rod][0]
+        if np.corrcoef(eof, EOFs_av[reg][0])[0][1] < 0:
+            eof = -eof
+        DF_eof1[SUB] = eof
+    pd.DataFrame(DF_eof1).to_csv(savepath+'EOF1/'+REG+'.csv')
 
-#     # EOF2
-#     DF_eof2 = {}
-#     DF_eof2['Average'] = EOFs_av[reg][1]
-#     for rod in range(len(SUBs)):
-#         SUB = SUBs[rod]
-#         eof = EOFs_ind[reg][rod][1]
-#         if np.corrcoef(eof, EOFs_av[reg][1])[0][1] < 0:
-#             eof = -eof
-#         DF_eof2[SUB] = eof
-#     pd.DataFrame(DF_eof2).to_csv(savepath+'EOF2/'+REG+'.csv')
+    # EOF2
+    DF_eof2 = {}
+    DF_eof2['Average'] = EOFs_av[reg][1]
+    for rod in range(len(SUBs)):
+        SUB = SUBs[rod]
+        eof = EOFs_ind[reg][rod][1]
+        if np.corrcoef(eof, EOFs_av[reg][1])[0][1] < 0:
+            eof = -eof
+        DF_eof2[SUB] = eof
+    pd.DataFrame(DF_eof2).to_csv(savepath+'EOF2/'+REG+'.csv')
 
-# # TimeSeries
-# DF_TS = {}
-# DF_TS['PC1_hip'] = PC1s[0]
-# DF_TS['PC1_par'] = PC1s[1]
-# DF_TS['PC1_pfc'] = PC1s[2]
+# TimeSeries
+DF_TS = {}
+DF_TS['PC1_hip'] = PC1s[0]
+DF_TS['PC1_par'] = PC1s[1]
+DF_TS['PC1_pfc'] = PC1s[2]
 
-# DF_TS['PC2_hip'] = PC2s[0]
-# DF_TS['PC2_par'] = PC2s[1]
-# DF_TS['PC2_pfc'] = PC2s[2]
+DF_TS['PC2_hip'] = PC2s[0]
+DF_TS['PC2_par'] = PC2s[1]
+DF_TS['PC2_pfc'] = PC2s[2]
 
-# DF_TS['PC1s_hip'] = PC1s_sm[0]
-# DF_TS['PC1s_par'] = PC1s_sm[1]
-# DF_TS['PC1s_pfc'] = PC1s_sm[2]
+DF_TS['PC1s_hip'] = PC1s_sm[0]
+DF_TS['PC1s_par'] = PC1s_sm[1]
+DF_TS['PC1s_pfc'] = PC1s_sm[2]
 
-# DF_TS['PC2s_hip'] = PC2s_sm[0]
-# DF_TS['PC2s_par'] = PC2s_sm[1]
-# DF_TS['PC2s_pfc'] = PC2s_sm[2]
+DF_TS['PC2s_hip'] = PC2s_sm[0]
+DF_TS['PC2s_par'] = PC2s_sm[1]
+DF_TS['PC2s_pfc'] = PC2s_sm[2]
 
-# DF_TS['PC1sh_hip'] = PC1s_shuf[0]
-# DF_TS['PC1sh_par'] = PC1s_shuf[1]
-# DF_TS['PC1sh_pfc'] = PC1s_shuf[2]
+DF_TS['PC1sh_hip'] = PC1s_shuf[0]
+DF_TS['PC1sh_par'] = PC1s_shuf[1]
+DF_TS['PC1sh_pfc'] = PC1s_shuf[2]
 
-# DF_TS['PC2sh_hip'] = PC2s_shuf[0]
-# DF_TS['PC2sh_par'] = PC2s_shuf[1]
-# DF_TS['PC2sh_pfc'] = PC2s_shuf[2]
+DF_TS['PC2sh_hip'] = PC2s_shuf[0]
+DF_TS['PC2sh_par'] = PC2s_shuf[1]
+DF_TS['PC2sh_pfc'] = PC2s_shuf[2]
 
-# DF_TS['Expl'] = Exploration
-# DF_TS['Rodent'] = Rodent
-# pd.DataFrame(DF_TS).to_pickle(savepath+'TotalSeries.pkl')
+DF_TS['Expl'] = Exploration
+DF_TS['Rodent'] = Rodent
+pd.DataFrame(DF_TS).to_pickle(savepath+'TotalSeries.pkl')

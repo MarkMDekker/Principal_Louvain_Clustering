@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.stats import wilcoxon
 import numpy as np
 import matplotlib.pyplot as plt
-savepath = '/Users/mmdekker/Documents/Werk/Data/SideProjects/Braindata/Processed/'
+savepath = '/Users/mmdekker/Documents/Werk/Data/Neuro/Processed/'
 
 # ----------------------------------------------------------------- #
 # Read data
